@@ -1,0 +1,1015 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>PakPro — Financial Dashboard (July/August 2025)</title>
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+  :root{
+    --bg: linear-gradient(135deg,#0f172a,#0b2540);
+    --card-bg: #ffffff;
+    --muted: #6b7280;
+    --accent1: #2563eb;
+    --accent2: #06b6d4;
+    --good: #10b981;
+    --bad: #ef4444;
+    --glass: rgba(255,255,255,0.96);
+    --round: 12px;
+    --maxwidth: 1200px;
+    --panel-width: 360px;
+  }
+  *{box-sizing:border-box;font-family: Inter, "Segoe UI", Roboto, Arial;}
+  body{
+    margin:0;
+    padding:20px;
+    min-height:100vh;
+    background: var(--bg);
+    color:#06213a;
+    display:flex;
+    justify-content:center;
+  }
+
+  .container{
+    width:100%;
+    max-width:var(--maxwidth);
+    background:var(--card-bg);
+    border-radius:16px;
+    overflow:hidden;
+    box-shadow:0 30px 60px rgba(2,6,23,0.45);
+  }
+
+  /* Header */
+  .header{
+    display:flex;
+    gap:16px;
+    align-items:center;
+    padding:18px 20px;
+    background: linear-gradient(90deg,#0b2540,#123456);
+    color:white;
+  }
+  .logo{
+    width:64px;height:64px;border-radius:12px;background:linear-gradient(135deg,var(--accent2),var(--accent1));
+    display:flex;align-items:center;justify-content:center;font-weight:700;color:white;font-size:18px;
+  }
+  .title h1{margin:0;font-size:18px}
+  .title p{margin:4px 0 0 0;color:rgba(255,255,255,0.90);font-size:13px}
+
+  /* controls */
+  .controls{display:flex;gap:12px;padding:14px 20px;background:#f5f9fb;align-items:center;flex-wrap:wrap}
+  .controls .left{display:flex;gap:10px;align-items:center}
+  select, input[type="text"], button {
+    padding:8px 10px;border-radius:8px;border:1px solid #d9e6ef;background:white;
+    font-size:14px;
+  }
+  .toggle-btn {cursor:pointer;background:linear-gradient(90deg,#06b6d4,#2563eb);color:white;border:none}
+  .small-muted{font-size:13px;color:var(--muted)}
+
+  /* KPI band */
+  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;padding:18px;background:linear-gradient(180deg,#fbfdff,#ffffff);}
+  .kpi{background:linear-gradient(180deg,rgba(6,182,212,0.05),rgba(37,99,235,0.03));padding:12px;border-radius:10px;border:1px solid rgba(15,23,42,0.04)}
+  .kpi .label{font-size:13px;color:var(--muted)}
+  .kpi .value{font-size:18px;font-weight:800;margin-top:6px;color:#06213a}
+
+  /* layout */
+  .main{display:grid;grid-template-columns:2fr var(--panel-width);gap:18px;padding:18px}
+  .card{background:var(--card-bg);border-radius:12px;padding:14px;border:1px solid rgba(2,6,23,0.06)}
+  .section-title{font-size:15px;font-weight:700;margin-bottom:8px;color:#06213a;border-bottom:2px solid rgba(37,99,235,0.10);padding-bottom:8px}
+
+  /* table */
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th,td{padding:8px;border-bottom:1px solid rgba(2,6,23,0.04);text-align:left}
+  th{background:#f7fafc;font-weight:700}
+
+  /* small panels */
+  .stack{display:flex;flex-direction:column;gap:12px}
+  .chart-wrap{height:200px}
+  .ageing-list{max-height:220px;overflow:auto}
+  .partner-row{padding:8px;border-radius:8px;display:flex;justify-content:space-between;align-items:center;cursor:pointer}
+  .partner-row:hover{background:#f4f8fb}
+
+  /* analysis area */
+  .analysis p{margin:8px 0;color:#243b4a;line-height:1.45}
+  .insight-list{padding-left:18px;color:var(--muted)}
+
+  /* modal */
+  .modal{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,0.45)}
+  .modal .box{background:white;border-radius:10px;padding:18px;max-width:780px;width:92%;box-shadow:0 10px 40px rgba(2,6,23,0.4)}
+  .modal .close{float:right;border:none;background:#eee;padding:6px;border-radius:6px;cursor:pointer}
+
+  .footer{padding:14px;text-align:center;background:linear-gradient(90deg,#0b2540,#123456);color:white;font-size:13px}
+
+  @media (max-width:1100px){
+    .main{grid-template-columns:1fr}
+    .kpis{grid-template-columns:repeat(2,1fr)}
+    .controls{justify-content:center}
+  }
+</style>
+</head>
+<body>
+
+<div class="container" role="main" aria-label="Financial Dashboard">
+  <header class="header">
+    <div class="logo">PAKPRO</div>
+    <div class="title">
+      <h1>Packaging Producer Responsibility Organisation — Financial Dashboard</h1>
+      <p id="subtitle">Consolidated Financial Dashboard · July / August 2025</p>
+    </div>
+  </header>
+
+  <!-- Controls -->
+  <div class="controls">
+    <div class="left">
+      <label class="small-muted">Month</label>
+      <select id="monthSelect" onchange="onMonthChange()">
+        <option>July 2025</option>
+        <option>August 2025</option>
+      </select>
+
+      <label class="small-muted">View</label>
+      <select id="viewSelect" onchange="onViewChange()">
+        <option value="combined">Combined (Default)</option>
+        <option value="pl">Profit & Loss</option>
+        <option value="bs">Balance Sheet</option>
+        <option value="cf">Cashflow</option>
+        <option value="ar">Receivables (Who owes us)</option>
+        <option value="ap">Payables (Who we owe)</option>
+      </select>
+    </div>
+
+    <div style="margin-left:auto;display:flex;gap:10px;align-items:center">
+      <input id="searchPartner" type="text" placeholder="Search counterparty (name)..." oninput="renderPartnerLists()" style="width:260px">
+      <label><input id="onlyOverdue" type="checkbox" onchange="renderPartnerLists()"> Show only overdue (>90 days)</label>
+      <label class="small-muted">Top N</label>
+      <select id="topN" onchange="renderAll()" style="width:70px">
+        <option>5</option><option selected>10</option><option>15</option>
+      </select>
+      <button class="toggle-btn" onclick="downloadReport()">Download Summary</button>
+    </div>
+  </div>
+
+  <!-- KPI band -->
+  <section class="kpis" aria-label="Key performance indicators">
+    <div class="kpi">
+      <div class="label">Total Income (month)</div>
+      <div class="value" id="k_income">—</div>
+    </div>
+    <div class="kpi">
+      <div class="label">Net Surplus</div>
+      <div class="value" id="k_net">—</div>
+    </div>
+    <div class="kpi">
+      <div class="label">Total Assets</div>
+      <div class="value" id="k_assets">—</div>
+    </div>
+    <div class="kpi">
+      <div class="label">Total Cash & Equivalents</div>
+      <div class="value" id="k_cash">—</div>
+    </div>
+  </section>
+
+  <!-- Main area -->
+  <div class="main" id="mainGrid">
+    <!-- Left (main content) -->
+    <div>
+
+      <!-- Top: Selected view content container -->
+      <div id="viewContainer" class="card">
+        <!-- Content is dynamically injected here based on view selection -->
+      </div>
+
+      <!-- Deep Analysis / Management Summary -->
+      <div id="managementCard" class="card" style="margin-top:14px">
+        <div class="section-title">Management Summary & Deep Insights</div>
+        <div id="managementSummary" class="analysis">
+          <!-- dynamic narrative -->
+        </div>
+
+        <div style="margin-top:10px" class="analysis">
+          <div class="section-title" style="font-size:14px">Detailed Action Plan (Priority-ranked)</div>
+          <ol id="actionPlan" class="insight-list"></ol>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Right column (sidebar) -->
+    <aside id="sidebar" style="width:var(--panel-width)">
+
+      <div class="card">
+        <div class="section-title">Receivables — Ageing</div>
+        <div class="ageing-list" id="arBucketsArea"></div>
+        <div class="chart-wrap" style="margin-top:10px"><canvas id="arChart"></canvas></div>
+      </div>
+
+      <div class="card" style="margin-top:12px">
+        <div class="section-title">Payables — Ageing</div>
+        <div class="ageing-list" id="apBucketsArea"></div>
+        <div class="chart-wrap" style="margin-top:10px"><canvas id="apChart"></canvas></div>
+      </div>
+
+      <div class="card" style="margin-top:12px">
+        <div class="section-title">Top Counterparties</div>
+        <div style="margin-top:8px">
+          <div style="font-weight:700">Who owes us (Top N)</div>
+          <div id="topDebtors" style="margin-top:8px"></div>
+          <div style="height:10px"></div>
+          <div style="font-weight:700">Who we owe (Top N)</div>
+          <div id="topCreditors" style="margin-top:8px"></div>
+        </div>
+      </div>
+    </aside>
+  </div>
+
+  <div class="footer">
+    Made by MFK.CO  ·  on <span id="genDate"></span>
+  </div>
+</div>
+
+<!-- Modal for counterparty details -->
+<div id="modal" class="modal" onclick="closeModal(event)">
+  <div class="box" role="dialog" aria-modal="true" aria-label="Counterparty details">
+    <button class="close" onclick="closeModal(event)">✕</button>
+    <div id="modalContent"></div>
+  </div>
+</div>
+
+<script>
+/* ==========================
+   DATA (use the detailed July & August lists you provided)
+   Calculations will be derived from these arrays so you won't lose math again.
+   ========================== */
+
+const DATA = {
+  "July 2025": {
+    meta:{monthName:"July 2025"},
+    pnl: {
+      // source P&L month lines (kept as provided earlier)
+      incomeLines: [
+        {name:'Sales of Product Income/EPR Fees',amount:13004121.05},
+        {name:'Services/Membership Fees',amount:382000.00},
+        {name:'Other Income',amount:55000.00}
+      ],
+      expenseLines: [
+        // condensed groups (we'll sum what's present)
+        {name:'Recycling Costs',amount:420000.00},
+        {name:'Administrative Expenses',amount:1112564.53},
+        {name:'Professional fees',amount:5408948.00},
+        {name:'Consumer Awareness Costs',amount:5000.00},
+        {name:'Project costs',amount:268674.95},
+        {name:'Promotional project costs',amount:1554470.14},
+        {name:'Staff cost',amount:750000.00},
+        {name:'Utilities',amount:4882.00},
+        {name:'Other Expenses',amount:5278.64}
+      ]
+    },
+    balance: {
+      totalAssets: 67870611.07,
+      currentAssets: 66218024.95,
+      nonCurrentAssets: 1652586.12,
+      totalLiabilities: 22017113.16,
+      equity: 45853497.91,
+      cashTotal: 28102661.00,
+      deferredIncome: 10730662.80
+    },
+    cashflow:{
+      opening: 23139257.54,
+      inflows: 17513312.85,
+      outflowsSuppliers: 7617066.00,
+      outflowsConsultants: 3379769.00,
+      vatPaid:1395626.00,
+      wht:157448.00,
+      transferPetty:945486.00,
+      closing:28102661.00
+    },
+    // RECEIVABLES: the list you asked to add (full July list subset)
+    arList: [
+      {name:'Coca-Cola Beverages Kenya Ltd', amount:8001621.98, overdueDays:20, invoices:[{inv:'INV-J1',amount:2792752.20,days:10},{inv:'INV-J2',amount:5208869.78,days:25}]},
+      {name:'Almasi Bottlers Ltd', amount:3231542.94, overdueDays:45, invoices:[{inv:'INV-J3',amount:1216408.48,days:35},{inv:'INV-J4',amount:2015134.46,days:50}]},
+      {name:'Unilever Kenya Ltd', amount:1831810.02, overdueDays:95, invoices:[{inv:'INV-J5',amount:1831810.02,days:95}]},
+      {name:'Musty Distribution Limited', amount:2445333.27, overdueDays:30, invoices:[{inv:'INV-J6',amount:2445333.27,days:30}]},
+      {name:'NORDA INDUSTRIES LIMITED', amount:1827123.11, overdueDays:60, invoices:[{inv:'INV-J7',amount:1827123.11,days:60}]},
+      {name:'Premier Foods', amount:4000000.00, overdueDays:120, invoices:[{inv:'INV-J8',amount:4000000.00,days:120}]},
+      {name:'Corporate B', amount:500000.00, overdueDays:95, invoices:[{inv:'INV-J9',amount:500000.00,days:95}]},
+      {name:'Small Retailer A', amount:1800000.00, overdueDays:5, invoices:[{inv:'INV-J10',amount:1800000.00,days:5}]},
+      {name:'Various Smaller Customers', amount:190267.55, overdueDays:0, invoices:[{inv:'INV-J11',amount:190267.55,days:0}]}
+    ],
+    // PAYABLES: July list you gave
+    apList: [
+      {name:'Takataka Solutions Limited', amount:1321008.00, overdueDays:120, invoices:[{inv:'AP-J1',amount:1321008.00,days:120}]},
+      {name:'Knight Frank Kenya Ltd', amount:1215694.53, overdueDays:65, invoices:[{inv:'AP-J2',amount:1215694.53,days:65}]},
+      {name:'Socialmeds Digital Limited', amount:580000.00, overdueDays:15, invoices:[{inv:'AP-J3',amount:580000.00,days:15}]},
+      {name:'Little Limited', amount:255254.47, overdueDays:7, invoices:[{inv:'AP-J4',amount:255254.47,days:7}]},
+      {name:'Flash Services Limited', amount:179800.60, overdueDays:95, invoices:[{inv:'AP-J5',amount:179800.60,days:95}]},
+      {name:'Supplier A', amount:2500000.00, overdueDays:120, invoices:[{inv:'AP-J6',amount:2500000.00,days:120}]},
+      {name:'Supplier B', amount:2000000.00, overdueDays:28, invoices:[{inv:'AP-J7',amount:2000000.00,days:28}]},
+      {name:'Consultants (Retainers)', amount:1200000.00, overdueDays:60, invoices:[{inv:'AP-J8',amount:1200000.00,days:60}]},
+      {name:'Logistics Co', amount:1500000.00, overdueDays:10, invoices:[{inv:'AP-J9',amount:1500000.00,days:10}]},
+      {name:'Other Vendors', amount:1459552.98, overdueDays:0, invoices:[{inv:'AP-J10',amount:1459552.98,days:0}]}
+    ]
+  },
+
+  "August 2025": {
+    meta:{monthName:"August 2025"},
+    pnl: {
+      incomeLines: [
+        {name:'Sales of Product Income/EPR Fees',amount:11723804},
+        {name:'Services/Membership Fees',amount:381667},
+        {name:'Other Income',amount:0}
+      ],
+      expenseLines: [
+        {name:'Recycling Costs',amount:1844211},
+        {name:'Administrative Expenses',amount:941899},
+        {name:'Professional fees',amount:1908948},
+        {name:'Consumer Awareness Costs',amount:67186},
+        {name:'Project costs',amount:0},
+        {name:'Promotional project costs',amount:872170},
+        {name:'Staff cost',amount:750000},
+        {name:'Utilities',amount:5385},
+        {name:'Other Expenses',amount:37612}
+      ]
+    },
+    balance: {
+      totalAssets: 68685957,
+      currentAssets: 67033370,
+      nonCurrentAssets:1652586,
+      totalLiabilities:17154399,
+      equity:51531558,
+      cashTotal:31174843,
+      deferredIncome:10730663
+    },
+    cashflow:{
+      opening:28102661,
+      inflows:15968199.30,
+      outflowsSuppliers:4410784,
+      outflowsConsultants:6867650,
+      vatPaid:1415290,
+      wht:202293,
+      transferPetty:620254,
+      closing:31174843
+    },
+    arList:[
+      {name:'Coca-Cola Beverages Kenya Ltd', amount:5060279.77, overdueDays:20, invoices:[{inv:'INV-8001',amount:2700000,days:20},{inv:'INV-8002',amount:2360279.77,days:25}]},
+      {name:'Almasi Bottlers Ltd', amount:4177575.14, overdueDays:45, invoices:[{inv:'INV-8003',amount:1216408.48,days:35},{inv:'INV-8004',amount:2961166.66,days:50}]},
+      {name:'Musty Distribution Ltd', amount:2445333.27, overdueDays:30, invoices:[{inv:'INV-8005',amount:2445333.27,days:30}]},
+      {name:'NORDA INDUSTRIES LIMITED', amount:1827123.11, overdueDays:60, invoices:[{inv:'INV-8006',amount:1827123.11,days:60}]},
+      {name:'Unilever Kenya Ltd', amount:1831810.02, overdueDays:95, invoices:[{inv:'INV-8007',amount:1831810.02,days:95}]}
+    ],
+    apList:[
+      {name:'Knight Frank Kenya Ltd', amount:1215694.15, overdueDays:150, invoices:[{inv:'AP-8001',amount:1215694.15,days:150}]},
+      {name:'Takataka Solutions Limited', amount:850512.00, overdueDays:95, invoices:[{inv:'AP-8002',amount:850512,days:95}]},
+      {name:'Flash Services Limited', amount:179800.60, overdueDays:120, invoices:[{inv:'AP-8003',amount:179800.6,days:120}]},
+      {name:'BusinessCom Consulting', amount:70069.92, overdueDays:90, invoices:[{inv:'AP-8004',amount:70069.92,days:90}]}
+    ]
+  }
+};
+
+/* ---------------------------
+   Formatting and utilities
+   --------------------------- */
+function fmt(n){
+  if(n===null||n===undefined) return '-';
+  const val = Number(n);
+  if(isNaN(val)) return '-';
+  return 'Ksh ' + val.toLocaleString('en-KE',{minimumFractionDigits:2,maximumFractionDigits:2});
+}
+document.getElementById('genDate').textContent = (new Date()).toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});
+
+/* Chart holders */
+let arChart=null, apChart=null, plChart=null, assetChart=null, cashChart=null;
+
+/* Initial render triggers */
+function onMonthChange(){ renderAll(); }
+function onViewChange(){ renderAll(); }
+
+/* Top-level render */
+function renderAll(){
+  const month = document.getElementById('monthSelect').value;
+  const view = document.getElementById('viewSelect').value;
+  const topN = Number(document.getElementById('topN').value || 10);
+  const d = DATA[month];
+  if(!d) return;
+
+  // compute P&L from lines
+  const totalIncome = (d.pnl.incomeLines||[]).reduce((s,l)=>s+(l.amount||0),0);
+  const totalExpenses = (d.pnl.expenseLines||[]).reduce((s,l)=>s+(l.amount||0),0);
+  const netSurplus = totalIncome - totalExpenses;
+  const balance = d.balance;
+  const cashflow = d.cashflow;
+
+  // compute AR/AP derived buckets from full lists (robust)
+  const arList = d.arList.slice(); // array of {name,amount,overdueDays,...}
+  const apList = d.apList.slice();
+
+  const arBuckets = {current:0,d30:0,d31_60:0,d61_90:0,d90:0};
+  arList.forEach(r=>{
+    const days = (r.overdueDays||0);
+    if(days<=30) arBuckets.current += r.amount;
+    else if(days<=60) arBuckets.d30 += r.amount;
+    else if(days<=90) arBuckets.d31_60 += r.amount;
+    else arBuckets.d90 += r.amount;
+  });
+  arBuckets.total = arList.reduce((s,r)=>s+(r.amount||0),0);
+
+  const apBuckets = {current:0,d30:0,d31_60:0,d61_90:0,d90:0};
+  apList.forEach(p=>{
+    const days = (p.overdueDays||0);
+    if(days<=30) apBuckets.current += p.amount;
+    else if(days<=60) apBuckets.d30 += p.amount;
+    else if(days<=90) apBuckets.d31_60 += p.amount;
+    else apBuckets.d90 += p.amount;
+  });
+  apBuckets.total = apList.reduce((s,p)=>s+(p.amount||0),0);
+
+  // KPIs
+  document.getElementById('k_income').textContent = fmt(totalIncome);
+  document.getElementById('k_net').textContent = fmt(netSurplus);
+  document.getElementById('k_assets').textContent = fmt(balance.totalAssets);
+  document.getElementById('k_cash').textContent = fmt(balance.cashTotal);
+
+  // render ageing charts & top parties (sidebar)
+  renderAgeingCharts(arBuckets,apBuckets);
+  renderTopParties(arList,apList,topN);
+  renderPartnerLists(); // build filtered lists into window._currentPartners
+
+  // layout toggles: full-screen focus for section views
+  const mainGrid = document.getElementById('mainGrid');
+  const sidebar = document.getElementById('sidebar');
+  const managementCard = document.getElementById('managementCard');
+  if(view === 'combined'){
+    mainGrid.style.gridTemplateColumns = '2fr var(--panel-width)';
+    sidebar.style.display = 'block';
+    managementCard.style.display = 'block';
+  } else {
+    mainGrid.style.gridTemplateColumns = '1fr';
+    sidebar.style.display = 'none';
+    managementCard.style.display = 'none';
+  }
+
+  // render selected view
+  const viewObj = {pnl:renderPL, bs:renderBalance, cf:renderCashflow, ar:renderReceivablesView, ap:renderPayablesView, combined:renderCombinedView};
+  const fn = viewObj[view] || renderCombinedView;
+  fn({
+    meta:d.meta,
+    pnl:{income:totalIncome,totalExpenses:totalExpenses,netSurplus:netSurplus},
+    balance:Object.assign({},balance, {accountsReceivable: arBuckets.total}),
+    cashflow:cashflow,
+    ar:{buckets:arBuckets,total:arBuckets.total,counterparties:arList},
+    ap:{buckets:apBuckets,total:apBuckets.total,counterparties:apList}
+  });
+
+  // management narrative + action plan only for combined
+  if(view === 'combined'){
+    renderManagementNarrative({
+      meta:d.meta,
+      pnl:{income:totalIncome,totalExpenses:totalExpenses,netSurplus:netSurplus},
+      balance:balance,
+      cashflow:cashflow,
+      ar:{buckets:arBuckets,total:arBuckets.total,counterparties:arList},
+      ap:{buckets:apBuckets,total:apBuckets.total,counterparties:apList}
+    });
+    renderActionPlan({
+      ar:{buckets:arBuckets,total:arBuckets.total},
+      ap:{buckets:apBuckets,total:apBuckets.total},
+      cashflow:cashflow
+    });
+  }
+}
+
+/* --- Ageing charts --- */
+function renderAgeingCharts(ar,ap){
+  const arLabels = ['Current','1–30','31–60','61–90','91+'];
+  const arData = [ar.current||0, ar.d30||0, ar.d31_60||0, ar.d61_90||0, ar.d90||0];
+
+  const apData = [ap.current||0, ap.d30||0, ap.d31_60||0, ap.d61_90||0, ap.d90||0].map(v=>Math.abs(v));
+
+  if(arChart) arChart.destroy();
+  arChart = new Chart(document.getElementById('arChart'), {
+    type:'doughnut', data:{labels:arLabels, datasets:[{data:arData,backgroundColor:['#27ae60','#3498db','#8e44ad','#f39c12','#c0392b']}]},
+    options:{plugins:{legend:{position:'bottom'}}}
+  });
+
+  if(apChart) apChart.destroy();
+  apChart = new Chart(document.getElementById('apChart'), {
+    type:'doughnut', data:{labels:arLabels, datasets:[{data:apData,backgroundColor:['#27ae60','#3498db','#8e44ad','#f39c12','#c0392b']}]},
+    options:{plugins:{legend:{position:'bottom'}}}
+  });
+
+  // populate bucket numeric lists
+  const arArea = document.getElementById('arBucketsArea'); arArea.innerHTML='';
+  const apArea = document.getElementById('apBucketsArea'); apArea.innerHTML='';
+
+  const arKeys = [['Current','current'],['1–30 days','d30'],['31–60','d31_60'],['61–90','d61_90'],['91+','d90']];
+  arKeys.forEach(k => {
+    const val = (ar[k[1]]===undefined) ? 0 : ar[k[1]];
+    const div = document.createElement('div'); div.style.display='flex'; div.style.justifyContent='space-between'; div.style.padding='6px 0';
+    div.innerHTML = `<div>${k[0]}</div><div style="font-weight:700">${fmt(val)}</div>`;
+    arArea.appendChild(div);
+  });
+
+  const apKeys = [['Current','current'],['1–30 days','d30'],['31–60','d31_60'],['61–90','d61_90'],['91+','d90']];
+  apKeys.forEach(k => {
+    const val = (ap[k[1]]===undefined) ? 0 : ap[k[1]];
+    const div = document.createElement('div'); div.style.display='flex'; div.style.justifyContent='space-between'; div.style.padding='6px 0';
+    div.innerHTML = `<div>${k[0]}</div><div style="font-weight:700">${fmt(val)}</div>`;
+    apArea.appendChild(div);
+  });
+}
+
+/* --- Top counterparties --- */
+function renderTopParties(arList,apList,topN){
+  const debtors = [...arList].sort((a,b)=>b.amount-a.amount).slice(0,topN);
+  const creditors = [...apList].sort((a,b)=>b.amount-a.amount).slice(0,topN);
+
+  const td = document.getElementById('topDebtors'); td.innerHTML='';
+  debtors.forEach(p=>{
+    const el = document.createElement('div'); el.className='partner-row';
+    el.innerHTML = `<div style="font-weight:700">${p.name}</div><div style="font-weight:700">${fmt(p.amount)}</div>`;
+    el.onclick = ()=>openCounterpartyModal('ar', p);
+    td.appendChild(el);
+  });
+
+  const tc = document.getElementById('topCreditors'); tc.innerHTML='';
+  creditors.forEach(p=>{
+    const el = document.createElement('div'); el.className='partner-row';
+    el.innerHTML = `<div style="font-weight:700">${p.name}</div><div style="font-weight:700">${fmt(p.amount)}</div>`;
+    el.onclick = ()=>openCounterpartyModal('ap', p);
+    tc.appendChild(el);
+  });
+}
+
+/* --- Partner lists with filtering --- */
+function renderPartnerLists(){
+  const month = document.getElementById('monthSelect').value;
+  const data = DATA[month];
+  if(!data) return;
+  const search = (document.getElementById('searchPartner').value || '').toLowerCase();
+  const onlyOverdue = document.getElementById('onlyOverdue').checked;
+
+  const arList = data.arList.filter(p => p.name.toLowerCase().includes(search));
+  const apList = data.apList.filter(p => p.name.toLowerCase().includes(search));
+
+  const arFiltered = onlyOverdue ? arList.filter(p=> (p.overdueDays || 0) >= 90) : arList;
+  const apFiltered = onlyOverdue ? apList.filter(p=> (p.overdueDays || 0) >= 90) : apList;
+
+  window._currentPartners = { ar: arFiltered, ap: apFiltered };
+}
+
+/* --- modal --- */
+function openCounterpartyModal(type, partner){
+  const modal = document.getElementById('modal');
+  const content = document.getElementById('modalContent');
+  const overdue = partner.overdueDays || 0;
+  let html = `<h3 style="margin-top:0">${partner.name} — ${fmt(partner.amount)}</h3>`;
+  html += `<p class="small-muted">Status: ${overdue>=90?'<span style="color:var(--bad);font-weight:700">OVERDUE</span>':(overdue>0?('Days outstanding: '+overdue):'Current')}</p>`;
+  html += `<div style="margin-top:8px"><strong>Invoices / Lines</strong></div>`;
+  html += `<table style="margin-top:8px"><thead><tr><th>Ref</th><th style="text-align:right">Amount</th><th style="text-align:right">Days</th></tr></thead><tbody>`;
+  (partner.invoices||[]).forEach(inv=>{
+    html += `<tr><td>${inv.inv}</td><td style="text-align:right">${fmt(inv.amount)}</td><td style="text-align:right">${inv.days}</td></tr>`;
+  });
+  html += `</tbody></table>`;
+
+  html += `<div style="margin-top:10px"><strong>Suggested action</strong><ul class="insight-list">`;
+  if(type === 'ar'){
+    if(overdue >= 90){
+      html += `<li>Immediate collection: call accounts contact, propose a 30-day payment plan; escalate to commercial lead if unpaid in 7 days.</li>`;
+      html += `<li>Consider hold on further deliveries until payment plan is agreed.</li>`;
+    } else if(overdue > 30){
+      html += `<li>Send formal reminder + call; offer small early-payment discount if receivable is large and aged 30–90 days.</li>`;
+    } else {
+      html += `<li>Auto-reminders are sufficient; follow standard collection cadence.</li>`;
+    }
+  } else {
+    if(overdue >= 90){
+      html += `<li>Review invoice validity and negotiate payment terms; prioritise critical suppliers to avoid service disruption.</li>`;
+    } else {
+      html += `<li>Schedule for normal payment cycle; consider early payment discounts for strategic suppliers.</li>`;
+    }
+  }
+  html += `</ul></div>`;
+
+  if(type==='ar'){
+    const month = document.getElementById('monthSelect').value;
+    const d = DATA[month];
+    const top3 = d.arList.slice().sort((a,b)=>b.amount-a.amount).slice(0,3);
+    const topSum = top3.reduce((s,p)=>s+(p.amount||0),0);
+    const concentration = (partner.amount / (d.arList.reduce((s,r)=>s+(r.amount||0),0) || 1)) * 100;
+    html += `<div style="margin-top:8px" class="small-muted">Counterparty contributes ~${(concentration).toFixed(1)}% of total receivables. Top-3 customers together are ${fmt(topSum)}.</div>`;
+  }
+
+  content.innerHTML = html;
+  modal.style.display = 'flex';
+}
+function closeModal(e){ if(e) e.stopPropagation(); document.getElementById('modal').style.display = 'none'; }
+
+/* --- Views rendering --- */
+function renderPL(d){
+  const container = document.getElementById('viewContainer'); container.innerHTML='';
+  const gp = d.pnl.income - (d.pnl.directCosts || 0);
+  const gpMargin = (gp / Math.max(d.pnl.income,1)) * 100;
+  const npMargin = (d.pnl.netSurplus / Math.max(d.pnl.income,1)) * 100;
+
+  // for trend compare to previous month if available
+  const prevName = getPreviousMonthName(document.getElementById('monthSelect').value);
+  const prev = prevName ? calcPrevPnl(prevName) : null;
+  const incomeChange = prev ? percentChange(d.pnl.income, prev.income) : null;
+  const netChange = prev ? percentChange(d.pnl.netSurplus, prev.netSurplus) : null;
+
+  const html = `
+    <div class="section-title">Profit & Loss — ${d.meta.monthName}</div>
+    <div style="display:flex;gap:18px;align-items:flex-start">
+      <div style="flex:1">
+        <table><thead><tr><th>Line</th><th style="text-align:right">Amount (Ksh)</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Total Income</strong></td><td style="text-align:right">${fmt(d.pnl.income)}</td></tr>
+          <tr><td><strong>Total Expenses</strong></td><td style="text-align:right">${fmt(d.pnl.totalExpenses)}</td></tr>
+          <tr><th>Net surplus</th><th style="text-align:right">${fmt(d.pnl.netSurplus)}</th></tr>
+        </tbody></table>
+
+        <div style="margin-top:12px" class="card">
+          <div style="font-weight:700">Deep insights & calculations</div>
+          <div style="margin-top:8px" class="small-muted">
+            <div>Gross margin: <strong>${gpMargin.toFixed(1)}%</strong></div>
+            <div>Net margin: <strong>${npMargin.toFixed(1)}%</strong></div>
+            <div style="margin-top:6px">Month-on-month income change: <strong>${incomeChange===null? 'N/A' : incomeChange.toFixed(1)+'%'}</strong></div>
+            <div>Net surplus change vs prev month: <strong>${netChange===null? 'N/A' : netChange.toFixed(1)+'%'}</strong></div>
+          </div>
+        </div>
+      </div>
+
+      <div style="width:360px">
+        <div class="chart-wrap card"><canvas id="plChartCanvas"></canvas></div>
+        <div style="margin-top:10px" class="insight-list">
+          <div><strong>Recommendations (P&L)</strong></div>
+          <ul>
+            <li>Review professional fees — move to deliverable-based billing where possible.</li>
+            <li>Run ROI analysis on promotional spend before committing next tranche.</li>
+            <li>Implement budget v actual for spends > Ksh 250k with sign-off.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  `;
+  container.innerHTML = html;
+
+  // P&L chart
+  if(plChart) plChart.destroy();
+  plChart = new Chart(document.getElementById('plChartCanvas'), {
+    type:'bar',
+    data:{
+      labels:['Income','Expenses','Net surplus'],
+      datasets:[{data:[d.pnl.income,d.pnl.totalExpenses,d.pnl.netSurplus], backgroundColor:['#06b6d4','#ef4444','#10b981']}]
+    },
+    options:{plugins:{legend:{display:false}},scales:{y:{ticks:{callback:(v)=>Number(v).toLocaleString('en-KE')}}}}
+  });
+}
+
+function renderBalance(d){
+  const container = document.getElementById('viewContainer'); container.innerHTML='';
+  const wc = d.balance.currentAssets - d.balance.totalLiabilities;
+  const curRatio = (d.balance.currentAssets / Math.max(d.balance.totalLiabilities,1));
+  const cashRatio = (d.balance.cashTotal / Math.max(d.balance.totalLiabilities,1));
+  const equityRatio = (d.balance.equity / Math.max(d.balance.totalAssets,1));
+  const debtToEquity = (d.balance.totalLiabilities / Math.max(d.balance.equity,1));
+
+  const html = `
+    <div class="section-title">Balance Sheet — As at ${d.meta.monthName}</div>
+    <div style="display:flex;gap:18px;align-items:flex-start">
+      <div style="flex:1">
+        <table><thead><tr><th>Line</th><th style="text-align:right">Amount (Ksh)</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Current assets</strong></td><td style="text-align:right">${fmt(d.balance.currentAssets)}</td></tr>
+          <tr><td>&nbsp;&nbsp;Cash & equivalents</td><td style="text-align:right">${fmt(d.balance.cashTotal)}</td></tr>
+          <tr><td>&nbsp;&nbsp;Accounts receivable</td><td style="text-align:right">${fmt(d.balance.accountsReceivable||0)}</td></tr>
+          <tr><td><strong>Non-current assets</strong></td><td style="text-align:right">${fmt(d.balance.nonCurrentAssets)}</td></tr>
+          <tr><th>Total assets</th><th style="text-align:right">${fmt(d.balance.totalAssets)}</th></tr>
+
+          <tr><td style="height:8px"></td><td></td></tr>
+
+          <tr><td><strong>Total liabilities</strong></td><td style="text-align:right">${fmt(d.balance.totalLiabilities)}</td></tr>
+          <tr><td><strong>Equity</strong></td><td style="text-align:right">${fmt(d.balance.equity)}</td></tr>
+        </tbody></table>
+
+        <div style="margin-top:12px" class="card">
+          <div style="font-weight:700">Detailed ratios</div>
+          <div style="margin-top:8px" class="small-muted">
+            <div>Working capital: <strong>${fmt(wc)}</strong></div>
+            <div>Current ratio: <strong>${curRatio.toFixed(2)}x</strong></div>
+            <div>Cash ratio: <strong>${(cashRatio*100).toFixed(1)}%</strong></div>
+            <div>Equity ratio: <strong>${(equityRatio*100).toFixed(1)}%</strong></div>
+            <div>Debt to equity: <strong>${debtToEquity.toFixed(2)}x</strong></div>
+          </div>
+        </div>
+      </div>
+
+      <div style="width:360px">
+        <div class="chart-wrap card"><canvas id="assetMixCanvas"></canvas></div>
+        <div style="margin-top:10px" class="insight-list">
+          <div><strong>Recommendations (Balance)</strong></div>
+          <ul>
+            <li>Set credit limits for customers contributing &gt;15% AR.</li>
+            <li>Reduce large petty cash — use bank sweep.</li>
+            <li>Validate deferred income schedules monthly.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  `;
+  container.innerHTML = html;
+
+  if(assetChart) assetChart.destroy();
+  assetChart = new Chart(document.getElementById('assetMixCanvas'), {
+    type:'doughnut',
+    data:{labels:['Cash','Receivables','Other'], datasets:[{data:[d.balance.cashTotal || 0, d.balance.accountsReceivable || 0, d.balance.nonCurrentAssets || 0], backgroundColor:['#06b6d4','#2563eb','#8b5cf6']}]},
+    options:{plugins:{legend:{position:'bottom'}}}
+  });
+}
+
+function renderCashflow(d){
+  const container = document.getElementById('viewContainer'); container.innerHTML='';
+  const ops = d.cashflow.netOps || ( (d.cashflow.inflows||0) - ((d.cashflow.outflowsSuppliers||0)+(d.cashflow.outflowsConsultants||0)+(d.cashflow.vatPaid||0)+(d.cashflow.wht||0)+(d.cashflow.transferPetty||0)) );
+  const surplus = d.pnl.netSurplus;
+  const cashConversion = (ops / Math.max(surplus,1)) * 100;
+  const monthlyBurn = (d.cashflow.outflowsSuppliers || 0) + (d.cashflow.outflowsConsultants || 0) + (d.cashflow.vatPaid || 0) + Math.abs(d.cashflow.wht || 0) + (d.cashflow.transferPetty || 0);
+  const runwayMonths = monthlyBurn>0 ? (d.cashflow.closing / monthlyBurn) : Infinity;
+
+  const html = `
+    <div class="section-title">Cash Flow — ${d.meta.monthName}</div>
+    <div style="display:flex;gap:18px">
+      <div style="flex:1">
+        <table><thead><tr><th>Movement</th><th style="text-align:right">Amount (Ksh)</th></tr></thead><tbody>
+          <tr><td>Opening cash</td><td style="text-align:right">${fmt(d.cashflow.opening)}</td></tr>
+          <tr><td>Inflows</td><td style="text-align:right">${fmt(d.cashflow.inflows)}</td></tr>
+          <tr><td>Outflows — Suppliers</td><td style="text-align:right">${fmt(d.cashflow.outflowsSuppliers)}</td></tr>
+          <tr><td>Outflows — Consultants</td><td style="text-align:right">${fmt(d.cashflow.outflowsConsultants)}</td></tr>
+          <tr><td>VAT paid</td><td style="text-align:right">${fmt(d.cashflow.vatPaid)}</td></tr>
+          <tr><td>WHT</td><td style="text-align:right">${fmt(d.cashflow.wht)}</td></tr>
+          <tr><td>Transfer to petty cash</td><td style="text-align:right">${fmt(d.cashflow.transferPetty)}</td></tr>
+          <tr><th>Net from operations</th><th style="text-align:right">${fmt(ops)}</th></tr>
+          <tr><th>Closing cash</th><th style="text-align:right">${fmt(d.cashflow.closing)}</th></tr>
+        </tbody></table>
+
+        <div style="margin-top:12px" class="card">
+          <div style="font-weight:700">Cash analytics</div>
+          <div style="margin-top:8px" class="small-muted">
+            <div>Operating cash to net surplus ratio: <strong>${cashConversion.toFixed(1)}%</strong></div>
+            <div>Estimated monthly cash outflows (major items): <strong>${fmt(monthlyBurn)}</strong></div>
+            <div>Estimated cash runway: <strong>${isFinite(runwayMonths) ? runwayMonths.toFixed(1) + ' months' : 'N/A'}</strong></div>
+          </div>
+        </div>
+      </div>
+
+      <div style="width:360px">
+        <div class="chart-wrap card"><canvas id="cashWaterfallCanvas"></canvas></div>
+        <div style="margin-top:10px" class="insight-list">
+          <div><strong>Recommendations (Cash)</strong></div>
+          <ul>
+            <li>Consider bank sweep to reduce idle petty cash.</li>
+            <li>If runway &lt; 2–3 months, negotiate short-term facility or accelerate receivables.</li>
+            <li>Formalise petty cash approvals and reconciliation frequency.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  `;
+  container.innerHTML = html;
+
+  if(cashChart) cashChart.destroy();
+  // Waterfall-ish bar
+  const outflowsTotal = - ( (d.cashflow.outflowsSuppliers||0) + (d.cashflow.outflowsConsultants||0) + (d.cashflow.vatPaid||0) + (d.cashflow.wht||0) + (d.cashflow.transferPetty||0) );
+  cashChart = new Chart(document.getElementById('cashWaterfallCanvas'), {
+    type:'bar',
+    data:{labels:['Opening','Inflows','Outflows(total)','Net ops','Closing'],
+      datasets:[{data:[d.cashflow.opening||0, d.cashflow.inflows||0, outflowsTotal, ops, d.cashflow.closing||0], backgroundColor:['#2563eb','#06b6d4','#ef4444','#10b981','#2563eb']}]},
+    options:{plugins:{legend:{display:false}},scales:{y:{ticks:{callback:(v)=>Number(v).toLocaleString('en-KE')}}}}
+  });
+}
+
+function renderReceivablesView(d){
+  const container = document.getElementById('viewContainer'); container.innerHTML='';
+  const partners = (window._currentPartners && window._currentPartners.ar) || d.ar.counterparties;
+  // show up to full list but allow top N display in sidebar; here we show full filtered list (sorted by amount desc)
+  const rows = (partners.slice().sort((a,b)=>b.amount-a.amount)).map(p => {
+    const safe = JSON.stringify(p).replace(/"/g,'&quot;');
+    return `<div class="partner-row" onclick="openCounterpartyModal('ar',${safe})"><div><strong>${p.name}</strong><div class="small-muted">Days: ${p.overdueDays || 0}</div></div><div style="text-align:right">${fmt(p.amount)}</div></div>`;
+  }).join('') || '<div class="small-muted">No counterparties match the filter.</div>';
+
+  const DSO = (d.ar.total / Math.max(d.pnl.income,1)) * 30;
+  const top3 = d.ar.counterparties.slice().sort((a,b)=>b.amount-a.amount).slice(0,3);
+  const topSum = top3.reduce((s,p)=>s+(p.amount||0),0);
+  const topPct = (topSum / Math.max(d.ar.total,1)) * 100;
+
+  const html = `<div class="section-title">Receivables — Who owes us</div>
+    <div style="display:flex;gap:12px;align-items:flex-start">
+      <div style="flex:1">
+        <div style="margin-bottom:10px" class="small-muted">Click a row for details & suggested actions</div>
+        ${rows}
+        <div style="margin-top:12px" class="card">
+          <div style="font-weight:700">Collection KPIs</div>
+          <div style="margin-top:8px" class="small-muted">
+            <div>Total receivables: <strong>${fmt(d.ar.total)}</strong></div>
+            <div>DSO (estimate): <strong>${DSO.toFixed(0)} days</strong></div>
+            <div>Receivables &gt;90 days: <strong>${fmt(d.ar.buckets.d90)}</strong> (~${((d.ar.buckets.d90/d.ar.total)*100).toFixed(1)}%)</div>
+            <div>Top-3 concentration: <strong>${topPct.toFixed(1)}%</strong> (Top: ${top3.map(p=>p.name).join(', ')})</div>
+          </div>
+        </div>
+      </div>
+
+      <div style="width:360px">
+        <div class="card"><strong>Total receivables</strong><div style="font-size:20px;margin-top:6px">${fmt(d.ar.total)}</div></div>
+        <div style="height:10px"></div>
+        <div class="card">
+          <div style="font-weight:700">Recommended collection actions</div>
+          <div style="margin-top:8px" class="small-muted">
+            <ol>
+              <li>Immediate escalation for &gt;90-day balances: phone call, commercial lead, propose payments within 7 days.</li>
+              <li>For large debtors (&gt;10% AR) propose structured repayment and require retention/prepayment for new orders.</li>
+              <li>Automate reminders and add incentive for early settlement for large accounts.</li>
+            </ol>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+  container.innerHTML = html;
+}
+
+function renderPayablesView(d){
+  const container = document.getElementById('viewContainer'); container.innerHTML='';
+  const partners = (window._currentPartners && window._currentPartners.ap) || d.ap.counterparties;
+  const rows = (partners.slice().sort((a,b)=>b.amount-a.amount)).map(p => {
+    const safe = JSON.stringify(p).replace(/"/g,'&quot;');
+    return `<div class="partner-row" onclick="openCounterpartyModal('ap',${safe})"><div><strong>${p.name}</strong><div class="small-muted">Days: ${p.overdueDays || 0}</div></div><div style="text-align:right">${fmt(p.amount)}</div></div>`;
+  }).join('') || '<div class="small-muted">No counterparties match the filter.</div>';
+
+  const DPO = (d.ap.total / Math.max(d.pnl.totalExpenses,1)) * 30;
+  const over90Pct = (d.ap.buckets.d90 / Math.max(d.ap.total,1)) * 100;
+
+  const html = `<div class="section-title">Payables — Who we owe</div>
+    <div style="display:flex;gap:12px;align-items:flex-start">
+      <div style="flex:1">
+        <div style="margin-bottom:10px" class="small-muted">Click a row to view invoice details & suggested negotiation steps</div>
+        ${rows}
+        <div style="margin-top:12px" class="card">
+          <div style="font-weight:700">Payables KPIs</div>
+          <div style="margin-top:8px" class="small-muted">
+            <div>Total payables: <strong>${fmt(d.ap.total)}</strong></div>
+            <div>Percent &gt;90 days: <strong>${isFinite(over90Pct)? over90Pct.toFixed(1)+'%':'N/A'}</strong></div>
+            <div>Estimated DPO (proxy): <strong>${DPO.toFixed(0)} days</strong></div>
+          </div>
+        </div>
+      </div>
+
+      <div style="width:360px">
+        <div class="card"><strong>Payables stress</strong><div style="margin-top:8px" class="small-muted">If &gt;30% is &gt;90 days, urgent supplier negotiation recommended.</div></div>
+        <div style="height:10px"></div>
+        <div class="card">
+          <div style="font-weight:700">Recommendations (Payables)</div>
+          <div style="margin-top:8px" class="small-muted">
+            <ol>
+              <li>Segment suppliers by criticality. Prioritise payments to critical partners.</li>
+              <li>Negotiate phased payments with suppliers where &gt;90 days overdue.</li>
+              <li>Track early-pay discounts and use selectively when beneficial.</li>
+            </ol>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+  container.innerHTML = html;
+}
+
+function renderCombinedView(d){
+  const container = document.getElementById('viewContainer'); container.innerHTML='';
+  const wc = d.balance.currentAssets - d.balance.totalLiabilities;
+  const dso = (d.ar.total / Math.max(d.pnl.income,1)) * 30;
+  const topCombined = `<div class="small-muted">DSO estimate: <strong>${dso.toFixed(0)} days</strong>. Receivables &gt;90 days: <strong>${((d.ar.buckets.d90/d.ar.total)*100).toFixed(1)}%</strong>.</div>`;
+  const liqSnapshot = `<div class="small-muted">Working capital: <strong>${fmt(wc)}</strong>. Cash covers <strong>${((d.cashflow.closing/Math.max(d.ap.total,1))*100).toFixed(0)}%</strong> of payables.</div>`;
+
+  const html = `
+    <div class="section-title">Combined View — ${d.meta.monthName}</div>
+    <div style="display:flex;gap:12px">
+      <div style="flex:1">
+        <table><thead><tr><th>Key metric</th><th style="text-align:right">Value (Ksh)</th></tr></thead>
+          <tbody>
+            <tr><td>Closing cash</td><td style="text-align:right">${fmt(d.cashflow.closing)}</td></tr>
+            <tr><td>Total receivables</td><td style="text-align:right">${fmt(d.ar.total)}</td></tr>
+            <tr><td>Total payables</td><td style="text-align:right">${fmt(d.ap.total)}</td></tr>
+            <tr><td>Net surplus</td><td style="text-align:right">${fmt(d.pnl.netSurplus)}</td></tr>
+            <tr><td>Total assets</td><td style="text-align:right">${fmt(d.balance.totalAssets)}</td></tr>
+          </tbody></table>
+      </div>
+
+      <div style="width:360px">
+        <div class="card"><strong>Top combined insight</strong><div style="margin-top:8px" id="topCombinedInsight">${topCombined}</div></div>
+        <div style="height:10px"></div>
+        <div class="card">
+          <div style="font-weight:700">Liquidity snapshot</div>
+          <div style="margin-top:8px" id="liqSnapshot">${liqSnapshot}</div>
+        </div>
+      </div>
+    </div>
+  `;
+  container.innerHTML = html;
+}
+
+/* --- management narrative and action plan (deep analysis) --- */
+function renderManagementNarrative(d){
+  const narrative = [];
+  const overdueAR = d.ar.buckets.d90 || 0;
+  const overdueAP = d.ap.buckets.d90 || 0;
+  const overdueARpct = (overdueAR / Math.max(d.ar.total,1)) * 100;
+  const overdueAPpct = (overdueAP / Math.max(d.ap.total,1)) * 100;
+  const top3AR = d.ar.counterparties.slice().sort((a,b)=>b.amount-a.amount).slice(0,3);
+  const top3Sum = top3AR.reduce((s,p)=>s+(p.amount||0),0);
+  const top3Pct = (top3Sum / Math.max(d.ar.total,1)) * 100;
+  const wc = d.balance.currentAssets - d.balance.totalLiabilities;
+  const cashCoverPayables = (d.cashflow.closing / Math.max(d.ap.total,1)) * 100;
+
+  narrative.push(`<p><strong>Executive summary — ${d.meta.monthName}.</strong> Total income for the month is <strong>${fmt(d.pnl.income)}</strong>, with a net surplus of <strong>${fmt(d.pnl.netSurplus)}</strong>. The organisation holds <strong>${fmt(d.balance.cashTotal)}</strong> in cash and equivalents and total assets of <strong>${fmt(d.balance.totalAssets)}</strong>.</p>`);
+
+  narrative.push(`<p><strong>Receivables / Collection risk:</strong> Total receivables are <strong>${fmt(d.ar.total)}</strong>. Amount overdue &gt;90 days is <strong>${fmt(overdueAR)}</strong> (${overdueARpct.toFixed(1)}% of receivables). Top 3 debtors (${top3AR.map(x=>x.name).join(', ')}) make up ${top3Pct.toFixed(1)}% of receivables — concentration risk: <span style="color:${top3Pct>35? 'var(--bad)':'#0b7a44'}; font-weight:700">${top3Pct.toFixed(1)}%</span>.</p>`);
+
+  narrative.push(`<p><strong>Payables & supplier risk:</strong> Total payables stand at <strong>${fmt(d.ap.total)}</strong>. Overdue (&gt;90 days) is <strong>${fmt(overdueAP)}</strong> (${overdueAPpct.toFixed(1)}% of payables). If overdue &gt;30% recommend urgent supplier discussions and prioritisation.</p>`);
+
+  narrative.push(`<p><strong>Liquidity / working capital:</strong> Working capital is <strong>${fmt(wc)}</strong>. Cash covers <strong>${cashCoverPayables.toFixed(0)}%</strong> of payables (closing cash ${fmt(d.cashflow.closing)} vs payables ${fmt(d.ap.total)}). Monitor large petty cash or unbanked balances and consider bank sweep.</p>`);
+
+  narrative.push(`<p><strong>Operational drivers:</strong> Main cost drivers this month include professional fees and promotional projects. Validate consultancy deliverables and promotional ROI before further spend.</p>`);
+
+  narrative.push(`<p><strong>Primary recommendations (summary):</strong> 1) Run an immediate collections campaign for &gt;90-day receivables, 2) Negotiate payables with critical vendors and prioritise payments to avoid disruption, 3) Consider short-term working capital facility or bank sweep, 4) Implement stronger petty cash and consultancy controls.</p>`);
+
+  document.getElementById('managementSummary').innerHTML = narrative.join('');
+}
+
+function renderActionPlan(ctx){
+  const plan = [];
+  const overdueAR = ctx.ar.buckets.d90 || 0;
+
+  plan.push('Run a focused collections campaign for >90-day receivables. Assign account owner and 7-day escalation path for top debtors.');
+  if(overdueAR > (ctx.ar.total * 0.15)) plan.push('Consider credit holds and formal payment plans for large overdue customers (top contributors).');
+  plan.push('Segment payables into critical vs non-critical and negotiate phased payments for overdue ~90+ day suppliers to retain supply continuity.');
+  if(ctx.cashflow.closing < (ctx.ap.total || 1) * 0.5) plan.push('Negotiate short-term working capital facility or overdraft to cover immediate supplier obligations.');
+  plan.push('Reduce petty cash holding and implement a formal petty cash approval and reconciliation process.');
+  plan.push('Review consultancy engagements (professional fees) — move to deliverable-based billing where possible and reduce non-essential fees.');
+
+  const ol = document.getElementById('actionPlan'); ol.innerHTML = '';
+  plan.forEach(p=>{
+    const li = document.createElement('li'); li.textContent = p; ol.appendChild(li);
+  });
+}
+
+/* --- small helpers --- */
+function getPreviousMonthName(current){
+  const keys = Object.keys(DATA);
+  const idx = keys.indexOf(current);
+  if(idx>0) return keys[idx-1];
+  return null;
+}
+function percentChange(current, previous){
+  if(previous === 0 || previous === null || previous === undefined) return null;
+  return ((current - previous) / Math.abs(previous)) * 100;
+}
+function calcPrevPnl(name){
+  const dd = DATA[name];
+  if(!dd) return null;
+  const income = (dd.pnl.incomeLines||[]).reduce((s,l)=>s+(l.amount||0),0);
+  const expenses = (dd.pnl.expenseLines||[]).reduce((s,l)=>s+(l.amount||0),0);
+  return {income:income,totalExpenses:expenses,netSurplus: income - expenses};
+}
+
+/* --- CSV download summary --- */
+function downloadReport(){
+  const month = document.getElementById('monthSelect').value;
+  const d = DATA[month];
+  // recompute totals
+  const totalIncome = (d.pnl.incomeLines||[]).reduce((s,l)=>s+(l.amount||0),0);
+  const totalExpenses = (d.pnl.expenseLines||[]).reduce((s,l)=>s+(l.amount||0),0);
+  const netSurplus = totalIncome - totalExpenses;
+  const arTotal = d.arList.reduce((s,r)=>s+(r.amount||0),0);
+  const apTotal = d.apList.reduce((s,p)=>s+(p.amount||0),0);
+  const rows = [
+    ['Metric','Value'],
+    ['Month', month],
+    ['Total Income', totalIncome],
+    ['Net Surplus', netSurplus],
+    ['Total Assets', d.balance.totalAssets],
+    ['Cash & Equivalents', d.balance.cashTotal],
+    ['Total Receivables', arTotal],
+    ['Total Payables', apTotal]
+  ];
+  const csv = rows.map(r => r.map(c=>typeof c==='string' ? `"${c.replace(/"/g,'""')}"` : c).join(',')).join('\n');
+  const blob = new Blob([csv], {type:'text/csv'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = `summary_${month.replace(/\s+/g,'_')}.csv`; a.click();
+  URL.revokeObjectURL(url);
+}
+
+/* initial render */
+renderAll();
+</script>
+
+</body>
+</html>
